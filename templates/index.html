@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Реєстр судів</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 0.02em; }
+    header span { font-size: 1.6rem; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+    .filters-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      margin-bottom: 1.25rem;
+    }
+
+    .filters-card form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field label { font-size: 0.78rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      border: 1.5px solid #dde1ea;
+      border-radius: 8px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.9rem;
+      color: #1a1a2e;
+      background: #fafbfc;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type="text"] { min-width: 260px; }
+    input[type="number"] { width: 120px; }
+    select { min-width: 220px; }
+
+    input:focus, select:focus { border-color: #4f6ef7; background: #fff; }
+
+    .btn-group { display: flex; gap: 0.5rem; }
+
+    button {
+      padding: 0.48rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+    button:active { transform: scale(.97); }
+
+    .btn-primary { background: #4f6ef7; color: #fff; }
+    .btn-primary:hover { background: #3a58e0; }
+    .btn-reset { background: #e8eaf0; color: #444; }
+    .btn-reset:hover { background: #d5d8e4; }
+
+    .stats {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.75rem;
+    }
+    .stats strong { color: #1a1a2e; }
+
+    .table-wrap {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid #f0f2f7; transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f7f8fc; }
+
+    td {
+      padding: 0.7rem 1rem;
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-inst-1 { background: #e8f4ff; color: #0066cc; }
+    .badge-inst-2 { background: #fff3e0; color: #cc6600; }
+    .badge-inst-3 { background: #e8fff0; color: #008844; }
+
+    .code { font-family: monospace; color: #666; font-size: 0.85rem; }
+
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: #888;
+      font-size: 1rem;
+    }
+
+    @media (max-width: 700px) {
+      input[type="text"] { min-width: 100%; }
+      select { min-width: 100%; }
+      .filters-card form { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>⚖️</span>
+  <h1>Реєстр судів України</h1>
+</header>
+
+<div class="container">
+
+  <div class="filters-card">
+    <form method="get" action="/">
+      <div class="field">
+        <label>Пошук по назві</label>
+        <input type="text" name="search" placeholder="Введіть назву суду..." value="{{ search }}" />
+      </div>
+
+      <div class="field">
+        <label>Код суду</label>
+        <input type="number" name="court_code" placeholder="напр. 1807"
+          value="{{ selected_court_code if selected_court_code is not none else '' }}" />
+      </div>
+
+      <div class="field">
+        <label>Інстанція</label>
+        <select name="instance_code">
+          <option value="">— Усі інстанції —</option>
+          {% for code in instance_codes %}
+          <option value="{{ code }}" {% if selected_instance == code %}selected{% endif %}>
+            {{ instance_labels.get(code, code) }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Регіон</label>
+        <select name="region_code">
+          <option value="">— Усі регіони —</option>
+          {% for code in region_codes %}
+          <option value="{{ code }}" {% if selected_region == code %}selected{% endif %}>
+            {{ region_labels.get(code, code) }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="btn-group">
+          <button type="submit" class="btn-primary">Фільтрувати</button>
+          <button type="button" class="btn-reset" onclick="window.location='/'">Скинути</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="stats">
+    Знайдено: <strong>{{ total }}</strong> суд{{ 'ів' if total != 1 else '' }}
+  </div>
+
+  <div class="table-wrap">
+    {% if courts %}
+    <table>
+      <thead>
+        <tr>
+          <th>Код</th>
+          <th>Назва суду</th>
+          <th>Інстанція</th>
+          <th>Регіон</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for court in courts %}
+        <tr>
+          <td class="code">{{ court.court_code }}</td>
+          <td>{{ court.name }}</td>
+          <td>
+            <span class="badge badge-inst-{{ court.instance_code }}">
+              {{ instance_labels.get(court.instance_code, court.instance_code) }}
+            </span>
+          </td>
+          <td>{{ region_labels.get(court.region_code, court.region_code) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">😕 Суди за вашим запитом не знайдено</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>
