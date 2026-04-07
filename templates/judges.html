@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Реєстр судів</title>
+  <title>Реєстр суддів</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,7 +25,7 @@
     header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 0.02em; }
     header span { font-size: 1.6rem; }
 
-    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .container { max-width: 1300px; margin: 0 auto; padding: 1.5rem 1rem; }
 
     .filters-card {
       background: #fff;
@@ -59,7 +59,7 @@
     }
     input[type="text"] { min-width: 260px; }
     input[type="number"] { width: 120px; }
-    select { min-width: 220px; }
+    select { min-width: 320px; }
 
     input:focus, select:focus { border-color: #4f6ef7; background: #fff; }
 
@@ -119,19 +119,24 @@
       vertical-align: middle;
     }
 
-    .badge {
+    .code { font-family: monospace; color: #666; font-size: 0.85rem; }
+
+    .sex-badge {
       display: inline-block;
       padding: 0.2rem 0.6rem;
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 600;
-      white-space: nowrap;
     }
-    .badge-inst-1 { background: #e8f4ff; color: #0066cc; }
-    .badge-inst-2 { background: #fff3e0; color: #cc6600; }
-    .badge-inst-3 { background: #e8fff0; color: #008844; }
+    .sex-m { background: #e8f4ff; color: #0066cc; }
+    .sex-f { background: #ffe8f4; color: #cc0066; }
 
-    .code { font-family: monospace; color: #666; font-size: 0.85rem; }
+    .court-link {
+      color: #4f6ef7;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    .court-link:hover { text-decoration: underline; }
 
     .empty {
       text-align: center;
@@ -153,45 +158,27 @@
   <span>⚖️</span>
   <h1>Реєстр судів України</h1>
   <nav style="margin-left:auto;display:flex;gap:0.5rem;">
-    <a href="/" style="color:#fff;background:rgba(255,255,255,.2);padding:.35rem .9rem;border-radius:6px;text-decoration:none;font-size:.88rem;font-weight:600;">Суди</a>
-    <a href="/judges" style="color:#fff;padding:.35rem .9rem;border-radius:6px;text-decoration:none;font-size:.88rem;font-weight:600;opacity:.75;">Судді</a>
+    <a href="/" style="color:#fff;padding:.35rem .9rem;border-radius:6px;text-decoration:none;font-size:.88rem;font-weight:600;opacity:.75;">Суди</a>
+    <a href="/judges" style="color:#fff;background:rgba(255,255,255,.2);padding:.35rem .9rem;border-radius:6px;text-decoration:none;font-size:.88rem;font-weight:600;">Судді</a>
   </nav>
 </header>
 
 <div class="container">
 
   <div class="filters-card">
-    <form method="get" action="/">
+    <form method="get" action="/judges">
       <div class="field">
-        <label>Пошук по назві</label>
-        <input type="text" name="search" placeholder="Введіть назву суду..." value="{{ search }}" />
+        <label>Пошук по імені</label>
+        <input type="text" name="search" placeholder="Введіть ПІБ судді..." value="{{ search }}" />
       </div>
 
       <div class="field">
-        <label>Код суду</label>
-        <input type="number" name="court_code" placeholder="напр. 1807"
-          value="{{ selected_court_code if selected_court_code is not none else '' }}" />
-      </div>
-
-      <div class="field">
-        <label>Інстанція</label>
-        <select name="instance_code">
-          <option value="">— Усі інстанції —</option>
-          {% for code in instance_codes %}
-          <option value="{{ code }}" {% if selected_instance == code %}selected{% endif %}>
-            {{ instance_labels.get(code, code) }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Регіон</label>
-        <select name="region_code">
-          <option value="">— Усі регіони —</option>
-          {% for code in region_codes %}
-          <option value="{{ code }}" {% if selected_region == code %}selected{% endif %}>
-            {{ region_labels.get(code, code) }}
+        <label>Суд</label>
+        <select name="court_code">
+          <option value="">— Усі суди —</option>
+          {% for court in courts_for_filter %}
+          <option value="{{ court.court_code }}" {% if selected_court_code == court.court_code %}selected{% endif %}>
+            [{{ court.court_code }}] {{ court.name or '—' }}
           </option>
           {% endfor %}
         </select>
@@ -201,44 +188,56 @@
         <label>&nbsp;</label>
         <div class="btn-group">
           <button type="submit" class="btn-primary">Фільтрувати</button>
-          <button type="button" class="btn-reset" onclick="window.location='/'">Скинути</button>
+          <button type="button" class="btn-reset" onclick="window.location='/judges'">Скинути</button>
         </div>
       </div>
     </form>
   </div>
 
   <div class="stats">
-    Знайдено: <strong>{{ total }}</strong> суд{{ 'ів' if total != 1 else '' }}
+    Знайдено: <strong>{{ total }}</strong> суддів
   </div>
 
   <div class="table-wrap">
-    {% if courts %}
+    {% if judges %}
     <table>
       <thead>
         <tr>
-          <th>Код</th>
-          <th>Назва суду</th>
-          <th>Інстанція</th>
-          <th>Регіон</th>
+          <th>ID</th>
+          <th>Прізвище</th>
+          <th>Ім'я</th>
+          <th>По батькові</th>
+          <th>Стать</th>
+          <th>Суд</th>
+          <th>Код суду</th>
         </tr>
       </thead>
       <tbody>
-        {% for court in courts %}
+        {% for j in judges %}
         <tr>
-          <td class="code">{{ court.court_code }}</td>
-          <td>{{ court.name }}</td>
+          <td class="code">{{ j.dos_id }}</td>
+          <td>{{ j.last_name or '—' }}</td>
+          <td>{{ j.first_name or '—' }}</td>
+          <td>{{ j.patronymic or '—' }}</td>
           <td>
-            <span class="badge badge-inst-{{ court.instance_code }}">
-              {{ instance_labels.get(court.instance_code, court.instance_code) }}
+            {% if j.sex %}
+            <span class="sex-badge {% if j.sex|trim == 'М' or j.sex|trim == 'M' %}sex-m{% else %}sex-f{% endif %}">
+              {{ j.sex|trim }}
             </span>
+            {% else %}—{% endif %}
           </td>
-          <td>{{ region_labels.get(court.region_code, court.region_code) }}</td>
+          <td>
+            {% if j.court_name %}
+            <a href="/?court_code={{ j.court_code }}" class="court-link">{{ j.court_name }}</a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="code">{{ j.court_code or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <div class="empty">😕 Суди за вашим запитом не знайдено</div>
+    <div class="empty">😕 Суддів за вашим запитом не знайдено</div>
     {% endif %}
   </div>
 

@@ -68,6 +68,55 @@ def to_int(value: Optional[str]) -> Optional[int]:
         return None
 
 
+@app.get("/judges", response_class=HTMLResponse)
+async def judges(
+    request: Request,
+    search: Optional[str] = Query(default=None),
+    court_code: Optional[str] = Query(default=None),
+):
+    court_code_int = to_int(court_code)
+    conn = await get_db()
+    try:
+        conditions = []
+        params = []
+
+        if search:
+            params.append(f"%{search}%")
+            conditions.append(f"LOWER(j.name) LIKE LOWER(${len(params)})")
+
+        if court_code_int is not None:
+            params.append(court_code_int)
+            conditions.append(f"j.court_code = ${len(params)}")
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = (
+            f"SELECT j.dos_id, j.name, j.short_name, j.last_name, j.first_name, j.patronymic, "
+            f"j.sex, j.court_code, c.name AS court_name "
+            f"FROM public.new_judges j "
+            f"LEFT JOIN public.courts c ON j.court_code = c.court_code "
+            f"{where} ORDER BY j.last_name, j.first_name"
+        )
+
+        rows = await conn.fetch(query, *params)
+        judges_list = [dict(r) for r in rows]
+
+        courts_rows = await conn.fetch(
+            "SELECT DISTINCT j.court_code, c.name FROM public.new_judges j "
+            "LEFT JOIN public.courts c ON j.court_code = c.court_code ORDER BY c.name"
+        )
+        courts_for_filter = [dict(r) for r in courts_rows]
+    finally:
+        await conn.close()
+
+    return templates.TemplateResponse(request, "judges.html", {
+        "judges": judges_list,
+        "total": len(judges_list),
+        "search": search or "",
+        "selected_court_code": court_code_int,
+        "courts_for_filter": courts_for_filter,
+    })
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
