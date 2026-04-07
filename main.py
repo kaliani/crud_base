@@ -1,60 +1,23 @@
 from fastapi import FastAPI, Request, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import asyncpg
 from typing import Optional
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+from agent.graph import graph
+from constants import INSTANCE_LABELS, REGION_LABELS
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+load_dotenv()
 
 DATABASE_URL = (
     f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
     f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 )
 
-INSTANCE_LABELS = {
-    1: "Перша інстанція (вищі суди)",
-    2: "Апеляційна інстанція",
-    3: "Перша інстанція (місцеві суди)",
-}
-
-REGION_LABELS = {
-    1: "Вінницька",
-    2: "Волинська",
-    3: "Дніпропетровська",
-    4: "Донецька",
-    5: "Житомирська",
-    6: "Закарпатська",
-    7: "Запорізька",
-    8: "Івано-Франківська",
-    9: "Київська",
-    10: "Кіровоградська",
-    11: "Луганська",
-    12: "Львівська",
-    13: "Миколаївська",
-    14: "Одеська",
-    15: "Полтавська",
-    16: "Рівненська",
-    17: "Сумська",
-    18: "Тернопільська",
-    19: "Харківська",
-    20: "Херсонська",
-    21: "Хмельницька",
-    22: "Черкаська",
-    23: "Чернівецька",
-    24: "Чернігівська",
-    25: "АР Крим",
-    26: "м. Київ",
-    27: "м. Севастополь",
-    31: "Луганська (окупована)",
-    32: "Донецька (окупована)",
-    33: "Запорізька (окупована)",
-    34: "Херсонська (окупована)",
-}
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 
 async def get_db():
@@ -66,6 +29,22 @@ def to_int(value: Optional[str]) -> Optional[int]:
         return int(value) if value not in (None, "") else None
     except (ValueError, TypeError):
         return None
+
+
+@app.post("/chat")
+async def chat(request: Request):
+    body = await request.json()
+    question = body.get("question", "").strip()
+    if not question:
+        return JSONResponse({"answer": ""}, status_code=400)
+    try:
+        result = await graph.ainvoke({
+            "messages": [{"role": "user", "content": question}]
+        })
+        answer = result["messages"][-1].content
+    except Exception as e:
+        return JSONResponse({"answer": f"Помилка: {e}"}, status_code=500)
+    return {"answer": answer}
 
 
 @app.get("/judges", response_class=HTMLResponse)

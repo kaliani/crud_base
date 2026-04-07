@@ -4,3 +4,7 @@ asyncpg
 jinja2
 python-multipart
 python-dotenv
+langchain-openai
+langchain-mcp-adapters
+langgraph
+mcp
